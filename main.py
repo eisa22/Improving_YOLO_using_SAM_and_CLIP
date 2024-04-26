@@ -37,13 +37,17 @@ class ObjectDetection:
 
             # Extract xy coordinates, confidences and class ids
             xyxys.append(boxes.xyxy)
-            confidences.append(boxes.conf)
-            class_ids.append(boxes.cls)
+            confidences.append(boxes.conf.tolist())  # Convert ndarray to list
+            class_ids.append(boxes.cls.tolist())  # Convert ndarray to list
 
+        # Save confidences and class_ids to a JSON file
+        data = {
+            "confidences": confidences,
+            "class_ids": class_ids
+        }
 
-
-            print(boxes)
-
+        with open('results.json', 'w') as f:
+            json.dump(data, f)
 
         return results[0].plot(), xyxys, confidences, class_ids
 
