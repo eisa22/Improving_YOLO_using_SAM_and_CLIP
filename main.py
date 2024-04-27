@@ -9,7 +9,7 @@ if __name__ == "__main__":
     webcam = False
 
     # Image path
-    image_path = 'Images/subimage3.jpg'
+    image_path = 'Images/subimage22.jpg'
 
     detector = YOLO.ObjectDetection(camera_idx, webcam, image_path)
     detector()

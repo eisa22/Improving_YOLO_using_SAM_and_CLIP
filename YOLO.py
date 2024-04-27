@@ -18,7 +18,7 @@ class ObjectDetection:
         self.model = self.load_model()
 
     def load_model(self):
-        model = YOLO('yolov8n')
+        model = YOLO('yolov8m')
         model.fuse()
         return model
 
