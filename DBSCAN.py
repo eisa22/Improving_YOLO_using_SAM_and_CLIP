@@ -4,7 +4,22 @@ from sklearn.cluster import DBSCAN
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import time
+import threading
 
+class DBSCANWithTimeout:
+    def __init__(self, eps, min_samples, features):
+        self.eps = eps
+        self.min_samples = min_samples
+        self.features = features  # Features are already normalized in extract_features
+        self.labels = None
+        self.exception = None
+
+    def run_dbscan(self):
+        try:
+            dbscan = DBSCAN(eps=self.eps, min_samples=self.min_samples, n_jobs=-1).fit(self.features)
+            self.labels = dbscan.labels_
+        except Exception as e:
+            self.exception = e
 
 def preprocess_image(image_path):
     # Load the image
@@ -15,7 +30,6 @@ def preprocess_image(image_path):
     image = cv2.resize(image, (256, 256))
 
     return image
-
 
 def extract_features(image):
     # Reshape the image to a 2D array of pixels
@@ -34,22 +48,40 @@ def extract_features(image):
 
     return features
 
+def segment_image(features, image_shape, eps, min_samples, prev_eps=None, prev_min_samples=None, timeout=3):
+    start_time = None
 
-def segment_image(features, image_shape, eps, min_samples, prev_eps=None, prev_min_samples=None):
     # Check if the eps or min_samples values have changed
     if eps != prev_eps or min_samples != prev_min_samples:
         start_time = time.time()  # Start the timer
         print(f"New parameters detected: eps={eps}, min_samples={min_samples}. Timer started at {start_time} seconds.")
 
-    # Apply DBSCAN with specified eps and min_samples
-    dbscan = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1).fit(features)
-    labels = dbscan.labels_
+    # Create a DBSCANWithTimeout instance
+    dbscan_instance = DBSCANWithTimeout(eps, min_samples, features)
+    dbscan_thread = threading.Thread(target=dbscan_instance.run_dbscan)
+
+    # Start the DBSCAN thread
+    dbscan_thread.start()
+
+    # Monitor the execution time
+    dbscan_thread.join(timeout)  # Wait for up to 8 seconds
+
+    if dbscan_thread.is_alive():
+        print("DBSCAN aborted due to timeout")
+        dbscan_thread.join()  # Ensure the thread is properly cleaned up
+        raise TimeoutError("DBSCAN exceeded the time limit of 8 seconds")
+
+    # Check for exceptions
+    if dbscan_instance.exception:
+        raise dbscan_instance.exception
+
+    # Get the labels
+    labels = dbscan_instance.labels
 
     # Reshape the labels to the original image shape
     segmented_image = labels.reshape(image_shape[:2])
 
     return segmented_image, labels
-
 
 def visualize_segmentation(image, segmented_image, labels):
     # Reshape labels to 2D for boolean indexing
@@ -82,6 +114,7 @@ def visualize_segmentation(image, segmented_image, labels):
     plt.imshow(output_image)
     plt.show()
 
+    return output_image
 
 # Process a single image for tuning
 image_path = 'Images/Table_with_objects.jpg'
@@ -96,8 +129,6 @@ plt.xlabel("PCA Component 1")
 plt.ylabel("PCA Component 2")
 plt.show()
 
-
-
 # Tune DBSCAN parameters
 eps_values = [0.1, 0.2, 0.3]
 min_samples_values = [50, 100, 200]
@@ -105,42 +136,37 @@ min_samples_values = [50, 100, 200]
 best_segmented_image = None
 best_labels = None
 max_clusters = 0
+best_eps = None
+best_min_samples = None
 
 for eps in eps_values:
     for min_samples in min_samples_values:
         print(f"DBSCAN with eps={eps}, min_samples={min_samples}")
 
-        #start_time = time.time()  # Record the start time
+        try:
+            segmented_image, labels = segment_image(features, image.shape, eps, min_samples)
+        except TimeoutError as e:
+            print(e)
+            continue
 
-        segmented_image, labels = segment_image(features, image.shape, eps, min_samples)
         unique_labels = np.unique(labels)
         num_clusters = len(unique_labels) - (1 if -1 in labels else 0)
 
-        #end_time = time.time()  # Record the end time
-        #elapsed_time = end_time - start_time  # Calculate the elapsed time
-
-        #print(f"DBSCAN completed in {elapsed_time} seconds")
-
-        #if elapsed_time > 8:
-            #print("DBSCAN took too long to run. Trying next parameters.")
-            #continue
-
         if num_clusters > max_clusters:
             max_clusters = num_clusters
             best_segmented_image = segmented_image
             best_labels = labels
-
-        if num_clusters > max_clusters:
-            max_clusters = num_clusters
-            best_segmented_image = segmented_image
-            best_labels = labels
+            best_eps = eps
+            best_min_samples = min_samples
 
 # Visualize the best segmentation result
 if best_segmented_image is not None and best_labels is not None:
-    visualize_segmentation(image, best_segmented_image, best_labels)
-    print(f"Best parameters: eps={eps}, min_samples={min_samples} with {max_clusters} clusters")
+    output_image = visualize_segmentation(image, best_segmented_image, best_labels)
+    print(f"Best parameters: eps={best_eps}, min_samples={best_min_samples} with {max_clusters} clusters")
 else:
     print("No valid clusters found.")
 
-# Save the best segmented image to Images/DBSCAN_Results
-cv2.imwrite('Images/DBSCAN_Results/DBS_clustered_image.jpg', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+# Save the best segmented image as a JPG file
+output_image_bgr = cv2.cvtColor(output_image, cv2.COLOR_RGB2BGR)  # Convert to BGR for OpenCV
+cv2.imwrite('Images/DBSCAN_Results/DBS_clustered_image.jpg', output_image_bgr)
+print("Cluster map saved successfully as a JPG image.")
