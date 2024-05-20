@@ -5,6 +5,7 @@ from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import time
 import threading
+import os
 
 class DBSCANWithTimeout:
     def __init__(self, eps, min_samples, features):
@@ -48,7 +49,7 @@ def extract_features(image):
 
     return features
 
-def segment_image(features, image_shape, eps, min_samples, prev_eps=None, prev_min_samples=None, timeout=3):
+def segment_image(features, image_shape, eps, min_samples, prev_eps=None, prev_min_samples=None, timeout=8):
     start_time = None
 
     # Check if the eps or min_samples values have changed
@@ -95,6 +96,8 @@ def visualize_segmentation(image, segmented_image, labels):
     # Create an output image with the same shape as the input
     output_image = np.zeros((image.shape[0], image.shape[1], 3), dtype=np.uint8)
 
+    bounding_boxes = []  # List to store bounding box coordinates
+
     for k, col in zip(unique_labels, colors):
         if k == -1:
             # Black color for noise
@@ -103,6 +106,15 @@ def visualize_segmentation(image, segmented_image, labels):
             col = (col[:3] * 255).astype(int)
         mask = labels_2d == k
         output_image[mask] = col
+
+        # Draw bounding box around each cluster
+        if k != -1:  # Skip noise
+            y, x = np.where(labels_2d == k)
+            if len(x) > 0 and len(y) > 0:
+                x_min, x_max = x.min(), x.max()
+                y_min, y_max = y.min(), y.max()
+                cv2.rectangle(output_image, (x_min, y_min), (x_max, y_max), (255, 255, 255), 2)
+                bounding_boxes.append((x_min, y_min, x_max, y_max))
 
     # Display the original and segmented images
     plt.figure(figsize=(12, 6))
@@ -114,7 +126,12 @@ def visualize_segmentation(image, segmented_image, labels):
     plt.imshow(output_image)
     plt.show()
 
-    return output_image
+    return output_image, bounding_boxes
+
+# Create output directory if it doesn't exist
+output_dir = 'Images/DBSCAN_Results'
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
 
 # Process a single image for tuning
 image_path = 'Images/Table_with_objects.jpg'
@@ -161,12 +178,20 @@ for eps in eps_values:
 
 # Visualize the best segmentation result
 if best_segmented_image is not None and best_labels is not None:
-    output_image = visualize_segmentation(image, best_segmented_image, best_labels)
+    output_image, bounding_boxes = visualize_segmentation(image, best_segmented_image, best_labels)
     print(f"Best parameters: eps={best_eps}, min_samples={best_min_samples} with {max_clusters} clusters")
+
+    # Save each bounding box as a separate image
+    for i, (x_min, y_min, x_max, y_max) in enumerate(bounding_boxes):
+        roi = image[y_min:y_max+1, x_min:x_max+1]
+        roi_bgr = cv2.cvtColor(roi, cv2.COLOR_RGB2BGR)  # Convert to BGR for OpenCV
+        roi_filename = os.path.join(output_dir, f'cluster_{i}.jpg')
+        cv2.imwrite(roi_filename, roi_bgr)
+        print(f"Saved bounding box {i} as {roi_filename}")
 else:
     print("No valid clusters found.")
 
 # Save the best segmented image as a JPG file
 output_image_bgr = cv2.cvtColor(output_image, cv2.COLOR_RGB2BGR)  # Convert to BGR for OpenCV
-cv2.imwrite('Images/DBSCAN_Results/DBS_clustered_image.jpg', output_image_bgr)
+cv2.imwrite(os.path.join(output_dir, 'DBS_clustered_image.jpg'), output_image_bgr)
 print("Cluster map saved successfully as a JPG image.")
