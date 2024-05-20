@@ -3,6 +3,7 @@ import cv2
 from sklearn.cluster import DBSCAN
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
+import time
 
 
 def preprocess_image(image_path):
@@ -34,7 +35,12 @@ def extract_features(image):
     return features
 
 
-def segment_image(features, image_shape, eps, min_samples):
+def segment_image(features, image_shape, eps, min_samples, prev_eps=None, prev_min_samples=None):
+    # Check if the eps or min_samples values have changed
+    if eps != prev_eps or min_samples != prev_min_samples:
+        start_time = time.time()  # Start the timer
+        print(f"New parameters detected: eps={eps}, min_samples={min_samples}. Timer started at {start_time} seconds.")
+
     # Apply DBSCAN with specified eps and min_samples
     dbscan = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1).fit(features)
     labels = dbscan.labels_
@@ -90,6 +96,8 @@ plt.xlabel("PCA Component 1")
 plt.ylabel("PCA Component 2")
 plt.show()
 
+
+
 # Tune DBSCAN parameters
 eps_values = [0.1, 0.2, 0.3]
 min_samples_values = [50, 100, 200]
@@ -101,10 +109,26 @@ max_clusters = 0
 for eps in eps_values:
     for min_samples in min_samples_values:
         print(f"DBSCAN with eps={eps}, min_samples={min_samples}")
+
+        #start_time = time.time()  # Record the start time
+
         segmented_image, labels = segment_image(features, image.shape, eps, min_samples)
         unique_labels = np.unique(labels)
         num_clusters = len(unique_labels) - (1 if -1 in labels else 0)
-        print(f"Number of clusters: {num_clusters}")
+
+        #end_time = time.time()  # Record the end time
+        #elapsed_time = end_time - start_time  # Calculate the elapsed time
+
+        #print(f"DBSCAN completed in {elapsed_time} seconds")
+
+        #if elapsed_time > 8:
+            #print("DBSCAN took too long to run. Trying next parameters.")
+            #continue
+
+        if num_clusters > max_clusters:
+            max_clusters = num_clusters
+            best_segmented_image = segmented_image
+            best_labels = labels
 
         if num_clusters > max_clusters:
             max_clusters = num_clusters
