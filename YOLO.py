@@ -1,20 +1,20 @@
 import torch
 import numpy as np
 import cv2
-from time import time
 from ultralytics import YOLO
 import json
-class ObjectDetection:
 
-    def __init__(self, capture_index, webcam=True, image_path=None, debug_mode=False):
+class ObjectDetection:
+    def __init__(self, capture_index, webcam=True, image_path=None, debug_mode=False, conf_threshold=0.1):
         self.capture_index = capture_index
         self.webcam = webcam
         self.image_path = image_path
         self.debug_mode = debug_mode
+        self.conf_threshold = conf_threshold
 
         # ToDo: Make everything run on cuda
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        print("Usind device: ", self.device)
+        print("Using device: ", self.device)
 
         self.model = self.load_model()
 
@@ -25,7 +25,16 @@ class ObjectDetection:
 
     def predict(self, frame):
         results = self.model(frame)
-        return results
+        # Filter results by confidence threshold
+        filtered_results = []
+        for result in results:
+            filtered_boxes = []
+            for box in result.boxes:
+                if box.conf >= self.conf_threshold:
+                    filtered_boxes.append(box)
+            result.boxes = filtered_boxes
+            filtered_results.append(result)
+        return filtered_results
 
     def plot_bboxes(self, results, frame):
         xyxys = []
@@ -34,19 +43,15 @@ class ObjectDetection:
 
         # Extract detections for class
         for result in results:
-            boxes = result.boxes.cpu().numpy()
-
-            # Extract xy coordinates, confidences and class ids
-            xyxys.append(boxes.xyxy.tolist())
-            confidences.append(boxes.conf.tolist())  # Convert ndarray to list
-            class_ids.append(boxes.cls.tolist())  # Convert ndarray to list
-
-
+            boxes = result.boxes
+            for box in boxes:
+                xyxys.append(box.xyxy.cpu().numpy().tolist())
+                confidences.append(box.conf.cpu().numpy().tolist())
+                class_ids.append(box.cls.cpu().numpy().tolist())
 
         return results[0].plot(), xyxys, confidences, class_ids
 
     def __call__(self):
-
         if self.webcam:
             cap = cv2.VideoCapture(self.capture_index)
             assert cap.isOpened(), "Cannot open camera"
@@ -118,3 +123,4 @@ class ObjectDetection:
         class_ids = data['class_ids']
         bounding_boxes = data['bounding_boxes']
         return bounding_boxes, confidences, class_ids
+

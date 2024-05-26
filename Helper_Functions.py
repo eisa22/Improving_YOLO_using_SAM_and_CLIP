@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import os
 class Helper_Functions:
 
     def __init__(self, image_path):
@@ -57,6 +58,50 @@ class Helper_Functions:
             print(f"Detected black areas: {black_areas}")
 
         return black_areas
+
+    def mask_undetected_areas(self, original_image_path, binary_mask, debug_mode=False):
+        # Load the original image
+        original_image = cv2.imread(original_image_path)
+        if original_image is None:
+            raise ValueError("The original image is invalid or not found.")
+
+        # Load the binary mask
+        if isinstance(binary_mask, str):
+            binary_mask = cv2.imread(binary_mask, cv2.IMREAD_GRAYSCALE)
+        elif isinstance(binary_mask, np.ndarray) and len(binary_mask.shape) == 3:
+            binary_mask = cv2.cvtColor(binary_mask, cv2.COLOR_BGR2GRAY)
+
+        if binary_mask is None:
+            raise ValueError("The binary mask image is invalid or not found.")
+
+        # Ensure the binary mask has binary values
+        _, binary_mask = cv2.threshold(binary_mask, 127, 255, cv2.THRESH_BINARY)
+
+        if debug_mode:
+            print("Binary Mask after Thresholding:")
+            print(np.unique(binary_mask, return_counts=True))  # Print unique values and their counts
+
+        # Resize the binary mask to match the original image size
+        binary_mask = cv2.resize(binary_mask, (original_image.shape[1], original_image.shape[0]))
+
+        # Create a white background
+        white_background = np.ones_like(original_image) * 255
+
+        # Invert the binary mask to create a mask for areas YOLO didn't detect
+        inverted_mask = cv2.bitwise_not(binary_mask)
+
+        # Create a masked version of the original image
+        masked_image = np.where(inverted_mask[:, :, np.newaxis] == 255, original_image, white_background)
+
+        if debug_mode:
+            cv2.imshow("Masked Image", masked_image)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+
+
+        return masked_image
+
+
 
 
 
