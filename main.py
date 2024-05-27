@@ -5,6 +5,7 @@ import cv2
 import Segment_Anything
 import OpenAI_API
 import OpenAI_Key
+import matplotlib.pyplot as plt
 
 # Control Panel
 # Choose camera idx: 0 for laptop webcam; idx:1 for external camera
@@ -16,8 +17,9 @@ image_path = 'Images/Table_with_objects.jpg' # Images/Sliding_Window_Results/sub
 sam_checkpoint = 'SegmentAnythingModel/sam_vit_h_4b8939.pth' # Segment anything checkpoint
 openAI_key = OpenAI_Key.openAI_key
 
-debug_mode = True
-enable_crawler = False
+debug_mode = True # Must be False for evaluation mode
+enable_crawler = True # Must be True for crawler
+enable_evaluation_mode = False # Must be True for evaluation mode
 
 if __name__ == "__main__":
     # Call YOLO Detector
@@ -29,8 +31,10 @@ if __name__ == "__main__":
 
     # Get YOLO Results
     bounding_boxes, confidences, class_ids = detector.get_Yolo_Results()
-    yolo_labels_with_boxes = helper.prepare_YOLO_Data(bounding_boxes, confidences, class_ids, conf_threshold_crawler)
+    yolo_labels_string, yolo_labels_class_id = helper.prepare_YOLO_Data(bounding_boxes, confidences, class_ids, conf_threshold_crawler, enable_evaluation_mode)
 
+    #print("YOLO Labels with string: ", yolo_labels_string)
+    #print("YOLO Labels with class id: ", yolo_labels_class_id)
 
     if enable_crawler:
 
@@ -43,22 +47,22 @@ if __name__ == "__main__":
 
         # Filter and send to API for relabeling
         labels_with_boxes = webcrawler.filter_and_send_to_api(frame, bounding_boxes, confidences, conf_threshold_crawler)
-        print("Formatted labels with boxes: ", yolo_labels_with_boxes)
-        print("New labels with boxes: ", labels_with_boxes)
+        #print("Formatted labels with boxes: ", yolo_labels_string)
+        #print("New labels with boxes: ", labels_with_boxes)
 
-        # Draw bounding boxes with new labels
-        helper.draw_bboxes_with_labels(frame, labels_with_boxes, yolo_labels_with_boxes)
+        # convert String IDs to Class IDs (int)
+        crawler_labels_class_id = helper.find_crawler_coco_ids(labels_with_boxes)
+        #print("Crawler labels with class id: ", crawler_labels_class_id)
 
-        # Merge lists
-        helper.merge_lists_and_write_to_json(labels_with_boxes, yolo_labels_with_boxes, image_id=1)
+        if enable_evaluation_mode:
+            helper.merge_lists_and_write_to_json(crawler_labels_class_id, yolo_labels_class_id, enable_evaluation_mode, image_id=1)
+        else:
+            # Merge lists
+            helper.merge_lists_and_write_to_json(labels_with_boxes, yolo_labels_string, enable_evaluation_mode, image_id=1)
+            # Draw bounding boxes with new labels
+            helper.draw_bboxes_with_labels(frame, labels_with_boxes, yolo_labels_string)
 
 
-
-    # Draw Bounding Boxes
-    helper.draw_boxes(image_path, bounding_boxes, debug_mode)
-
-    # Create Binary Mask
-    binary_mask = helper.create_binary_mask(bounding_boxes, debug_mode)
 
 
 

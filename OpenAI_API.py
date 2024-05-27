@@ -71,20 +71,18 @@ class Webcrawler:
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
+                {"role": "system",
+                 "content": "You are an assistant that identifies objects in images. Use only labels mentioned in coco dataset."},
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "What object is in image? Answer in one word and give confidence. Format: Label, Confidence in %"},
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": image_url,
-                            },
-                        },
+                        {"type": "text",
+                         "text": "What object is in this image? Answer in one word and give confidence. Format: Label, Confidence in %"},
+                        {"type": "image_url", "image_url": {"url": image_url}},
                     ],
                 }
             ],
-            max_tokens=300,
+            max_tokens=100,  # Adjust max tokens to a reasonable limit
         )
         print("Response", response)
 
