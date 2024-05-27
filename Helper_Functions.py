@@ -62,17 +62,27 @@ class Helper_Functions:
 
 
 
-    def prepare_YOLO_Data(self, bounding_boxes, confidences, class_ids, threshold):
+    def prepare_YOLO_Data(self, bounding_boxes, confidences, class_ids, threshold, enable_evaluation_mode):
         yolo_labels_with_boxes = list(zip(bounding_boxes, class_ids, confidences))
+        formatted_yolo_labels_string = []
+        yolo_labels_class_id = []
+        if not enable_evaluation_mode:
+            # Apply labels from coco classes list and format bounding boxes correctly
+            formatted_yolo_labels_string = [
+                (bbox[0], coco_classes[int(label[0])], confidences[0])
+                for bbox, label, confidences in yolo_labels_with_boxes
+                if confidences[0] >= threshold
+            ]
 
-        # Apply labels from coco classes list and format bounding boxes correctly
-        formatted_yolo_labels_with_bboxes = [
-            (bbox[0], coco_classes[int(label[0])], confidences[0])
-            for bbox, label, confidences in yolo_labels_with_boxes
-            if confidences[0] >= threshold
-        ]
+        if enable_evaluation_mode:
+            # Format yolo_labels_with_boxes in the same way
+            yolo_labels_class_id = [
+                (bbox[0], label[0], confidences[0])
+                for bbox, label, confidences in yolo_labels_with_boxes
+            ]
 
-        return formatted_yolo_labels_with_bboxes
+
+        return formatted_yolo_labels_string, yolo_labels_class_id
 
     @staticmethod
     def draw_bboxes_with_labels(frame, labels_with_boxes, yolo_labels_with_boxes):
@@ -96,34 +106,62 @@ class Helper_Functions:
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-    def merge_lists_and_write_to_json(self, list1, list2, image_id=None):
+    def merge_lists_and_write_to_json(self, list1, list2, enable_evaluation_mode=False, image_id=None):
         merged_list = list1 + list2
 
         # Create a dictionary for each item in the merged list
         formatted_list = [
             {
                 'image_id': image_id,
-                'category_id': item[0],
-                'bbox': item[1],
+                'category_id': item[1],
+                'bbox': item[0],
                 'score': item[2]
             }
             for item in merged_list
         ]
+        if enable_evaluation_mode:
+            # Read existing data
+            try:
+                with open('results_evaluation.json.json', 'r') as f:
+                    existing_data = json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError):
+                existing_data = []
 
-        # Read existing data
-        try:
-            with open('results.json', 'r') as f:
-                existing_data = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            existing_data = []
+            # Append new data to existing data
+            combined_data = existing_data + formatted_list
 
-        # Append new data to existing data
-        combined_data = existing_data + formatted_list
+            # Write combined data to file
+            with open('results_evaluation.json', 'w') as f:
+                json.dump(combined_data, f)
+        else:
+            # Read existing data
+            try:
+                with open('results_gui.json', 'r') as f:
+                    existing_data = json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError):
+                existing_data = []
 
-        # Write combined data to file
-        with open('results.json', 'w') as f:
-            json.dump(combined_data, f)
+            # Append new data to existing data
+            combined_data = existing_data + formatted_list
 
+            # Write combined data to file
+            with open('results_gui.json', 'w') as f:
+                json.dump(combined_data, f)
+
+
+    def find_crawler_coco_ids(self, labels_with_boxes):
+        if not labels_with_boxes:
+            print("No labels found.")
+            return []
+
+        labels_with_ids = []
+        for bbox, label, confidence in labels_with_boxes:
+            try:
+                label_id = coco_classes.index(label.lower())
+            except ValueError:
+                continue  # Skip if label is not found in coco_classes
+            labels_with_ids.append((bbox, label_id, confidence))
+        return labels_with_ids
 
 
 
