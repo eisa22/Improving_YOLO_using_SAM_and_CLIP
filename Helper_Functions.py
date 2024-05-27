@@ -1,6 +1,19 @@
 import cv2
 import numpy as np
 import os
+
+
+coco_classes = [
+    'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light',
+    'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow',
+    'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee',
+    'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard',
+    'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple',
+    'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
+    'potted plant', 'bed', 'dining table', 'toilet', 'TV', 'laptop', 'mouse', 'remote', 'keyboard',
+    'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase',
+    'scissors', 'teddy bear', 'hair drier', 'toothbrush'
+]
 class Helper_Functions:
 
     def __init__(self, image_path):
@@ -100,6 +113,17 @@ class Helper_Functions:
 
 
         return masked_image
+
+    def prepare_YOLO_Data(self, bounding_boxes, confidences, class_ids):
+        yolo_labels_with_boxes = list(zip(bounding_boxes, class_ids))
+
+        # Apply labels from coco classes list and format bounding boxes correctly
+        formatted_yolo_labels_with_bboxes = [
+            (bbox[0], coco_classes[int(label[0])]) for bbox, label in yolo_labels_with_boxes
+        ]
+
+        return formatted_yolo_labels_with_bboxes
+
 
 
 

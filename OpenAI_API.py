@@ -87,7 +87,7 @@ class Webcrawler:
         return response.choices[0].message.content
 
     @staticmethod
-    def draw_bboxes_with_labels(frame, labels_with_boxes):
+    def draw_bboxes_with_labels(frame, labels_with_boxes, yolo_labels_with_boxes):
         """
         Draws bounding boxes and labels on the image.
 
@@ -96,14 +96,14 @@ class Webcrawler:
         frame : ndarray
             The original image frame.
         labels_with_boxes : list
-            List of tuples containing bounding box coordinates and labels.
+            List of tuples containing bounding box coordinates and labels from the webcrawler.
+        yolo_labels_with_boxes : list
+            List of tuples containing bounding box coordinates and labels from YOLO.
         """
-        for (bbox, label) in labels_with_boxes:
+        for (bbox, label) in labels_with_boxes + yolo_labels_with_boxes:
             x1, y1, x2, y2 = map(int, bbox)
-            print(f"Label: {str(label)}")
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.putText(frame, str(label), (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
+            cv2.putText(frame, str(label), (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
         cv2.imshow('Image with Labels', frame)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
