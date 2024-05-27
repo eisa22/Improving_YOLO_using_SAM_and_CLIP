@@ -5,6 +5,7 @@ import cv2
 import Segment_Anything
 import OpenAI_API
 import OpenAI_Key
+import matplotlib.pyplot as plt
 
 # Control Panel
 # Choose camera idx: 0 for laptop webcam; idx:1 for external camera
@@ -17,7 +18,7 @@ sam_checkpoint = 'SegmentAnythingModel/sam_vit_h_4b8939.pth' # Segment anything 
 openAI_key = OpenAI_Key.openAI_key
 
 debug_mode = True
-enable_crawler = False
+enable_crawler = True
 
 if __name__ == "__main__":
     # Call YOLO Detector
@@ -59,6 +60,7 @@ if __name__ == "__main__":
 
     # Create Binary Mask
     binary_mask = helper.create_binary_mask(bounding_boxes, debug_mode)
+
 
 
 

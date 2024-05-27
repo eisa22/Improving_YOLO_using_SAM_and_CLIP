@@ -3,6 +3,7 @@ import numpy as np
 import json
 
 
+
 coco_classes = [
     'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light',
     'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow',
@@ -113,7 +114,7 @@ class Helper_Functions:
         try:
             with open('results.json', 'r') as f:
                 existing_data = json.load(f)
-        except FileNotFoundError:
+        except (FileNotFoundError, json.JSONDecodeError):
             existing_data = []
 
         # Append new data to existing data
@@ -122,6 +123,7 @@ class Helper_Functions:
         # Write combined data to file
         with open('results.json', 'w') as f:
             json.dump(combined_data, f)
+
 
 
 
