@@ -38,7 +38,11 @@ class Webcrawler:
                     sub_image = frame[y1:y2, x1:x2]
                     _, img_encoded = cv2.imencode('.jpg', sub_image)
                     new_label = self.send_image_to_api(img_encoded)
-                    new_labels_with_boxes.append((bbox, new_label))
+                    parts = new_label.split(',')
+                    label_text = parts[0].strip()
+                    confidence = float(parts[1].strip().replace('%', '')) / 100.0  # Convert percentage to a decimal
+
+                    new_labels_with_boxes.append((bbox, label_text, confidence))
 
         return new_labels_with_boxes
 
@@ -70,7 +74,7 @@ class Webcrawler:
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "What’s in this image? In one word"},
+                        {"type": "text", "text": "What object is in image? Answer in one word and give confidence. Format: Label, Confidence in %"},
                         {
                             "type": "image_url",
                             "image_url": {
@@ -86,24 +90,3 @@ class Webcrawler:
 
         return response.choices[0].message.content
 
-    @staticmethod
-    def draw_bboxes_with_labels(frame, labels_with_boxes, yolo_labels_with_boxes):
-        """
-        Draws bounding boxes and labels on the image.
-
-        Parameters
-        ----------
-        frame : ndarray
-            The original image frame.
-        labels_with_boxes : list
-            List of tuples containing bounding box coordinates and labels from the webcrawler.
-        yolo_labels_with_boxes : list
-            List of tuples containing bounding box coordinates and labels from YOLO.
-        """
-        for (bbox, label) in labels_with_boxes + yolo_labels_with_boxes:
-            x1, y1, x2, y2 = map(int, bbox)
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.putText(frame, str(label), (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-        cv2.imshow('Image with Labels', frame)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()

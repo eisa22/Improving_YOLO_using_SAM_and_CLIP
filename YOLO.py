@@ -97,7 +97,7 @@ class ObjectDetection:
                 "bounding_boxes": xyxys
             }
 
-            with open('results.json', 'w') as f:
+            with open('YOLO_results.json', 'w') as f:
                 json.dump(data, f)
 
             if self.debug_mode:
@@ -116,7 +116,7 @@ class ObjectDetection:
             the bounding box coordinates, the confidences, and the class ids
         """
         # Read bounding box coordinates
-        with open('results.json', 'r') as f:
+        with open('YOLO_results.json', 'r') as f:
             data = json.load(f)
 
         confidences = data['confidences']
