@@ -5,7 +5,7 @@ from google.cloud import vision
 import numpy as np
 
 # Set the path to the Google Cloud service account key file
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'Cloud_Vision_Key/visionapi-423909-843341ebf44d.json'
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'Private_Keys/visionapi20-e52ea9592f90.json'
 
 # Initialize the Google Cloud Vision client
 client = vision.ImageAnnotatorClient()

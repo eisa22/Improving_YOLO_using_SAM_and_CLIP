@@ -1,4 +1,5 @@
 # Ignore specific directories
 Images/Image_Patching/
 Images/Sliding_Window_Results/
-Cloud_Vision_Key/
+Private_Keys/
+openAI_Key.py
