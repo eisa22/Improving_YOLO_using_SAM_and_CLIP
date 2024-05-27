@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-import os
+import json
 
 
 coco_classes = [
@@ -34,7 +34,6 @@ class Helper_Functions:
             cv2.imshow('Bounding Boxes', image)
             cv2.waitKey(0)
 
-
     def create_binary_mask(self, bounding_boxes, debug_mode):
         # Load the original image
         image = cv2.imread(self.image_path)
@@ -48,6 +47,8 @@ class Helper_Functions:
                 x1, y1, x2, y2 = map(int, box)  # Convert coordinates to integers
                 binary_mask[y1:y2, x1:x2] = 255  # Fill in the region
 
+                # Draw bounding box in green on the binary mask
+                cv2.rectangle(binary_mask, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
         if debug_mode:
             # Display the binary mask
@@ -57,72 +58,70 @@ class Helper_Functions:
         return binary_mask
 
 
-    def draw_boxes_on_black_areas(self, binary_mask, debug_mode=False):
-
-        _, binary_image = cv2.threshold(binary_mask, 127, 255, cv2.THRESH_BINARY)
-
-        # Find contours
-        contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        black_areas = []
-        for contour in contours:
-            x, y, w, h = cv2.boundingRect(contour)
-            black_areas.append((x, y, w, h))
-            print(f"Detected black areas: {black_areas}")
-
-        return black_areas
-
-    def mask_undetected_areas(self, original_image_path, binary_mask, debug_mode=False):
-        # Load the original image
-        original_image = cv2.imread(original_image_path)
-        if original_image is None:
-            raise ValueError("The original image is invalid or not found.")
-
-        # Load the binary mask
-        if isinstance(binary_mask, str):
-            binary_mask = cv2.imread(binary_mask, cv2.IMREAD_GRAYSCALE)
-        elif isinstance(binary_mask, np.ndarray) and len(binary_mask.shape) == 3:
-            binary_mask = cv2.cvtColor(binary_mask, cv2.COLOR_BGR2GRAY)
-
-        if binary_mask is None:
-            raise ValueError("The binary mask image is invalid or not found.")
-
-        # Ensure the binary mask has binary values
-        _, binary_mask = cv2.threshold(binary_mask, 127, 255, cv2.THRESH_BINARY)
-
-        if debug_mode:
-            print("Binary Mask after Thresholding:")
-            print(np.unique(binary_mask, return_counts=True))  # Print unique values and their counts
-
-        # Resize the binary mask to match the original image size
-        binary_mask = cv2.resize(binary_mask, (original_image.shape[1], original_image.shape[0]))
-
-        # Create a white background
-        white_background = np.ones_like(original_image) * 255
-
-        # Invert the binary mask to create a mask for areas YOLO didn't detect
-        inverted_mask = cv2.bitwise_not(binary_mask)
-
-        # Create a masked version of the original image
-        masked_image = np.where(inverted_mask[:, :, np.newaxis] == 255, original_image, white_background)
-
-        if debug_mode:
-            cv2.imshow("Masked Image", masked_image)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
 
 
-        return masked_image
 
-    def prepare_YOLO_Data(self, bounding_boxes, confidences, class_ids):
-        yolo_labels_with_boxes = list(zip(bounding_boxes, class_ids))
+    def prepare_YOLO_Data(self, bounding_boxes, confidences, class_ids, threshold):
+        yolo_labels_with_boxes = list(zip(bounding_boxes, class_ids, confidences))
 
         # Apply labels from coco classes list and format bounding boxes correctly
         formatted_yolo_labels_with_bboxes = [
-            (bbox[0], coco_classes[int(label[0])]) for bbox, label in yolo_labels_with_boxes
+            (bbox[0], coco_classes[int(label[0])], confidences[0])
+            for bbox, label, confidences in yolo_labels_with_boxes
+            if confidences[0] >= threshold
         ]
 
         return formatted_yolo_labels_with_bboxes
+
+    @staticmethod
+    def draw_bboxes_with_labels(frame, labels_with_boxes, yolo_labels_with_boxes):
+        """
+        Draws bounding boxes and labels on the image.
+
+        Parameters
+        ----------
+        frame : ndarray
+            The original image frame.
+        labels_with_boxes : list
+            List of tuples containing bounding box coordinates and labels from the webcrawler.
+        yolo_labels_with_boxes : list
+            List of tuples containing bounding box coordinates and labels from YOLO.
+        """
+        for (bbox, label, confidences) in labels_with_boxes + yolo_labels_with_boxes:
+            x1, y1, x2, y2 = map(int, bbox)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.putText(frame, f"{label} {confidences:.2f}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        cv2.imshow('Image with Labels', frame)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+    def merge_lists_and_write_to_json(self, list1, list2, image_id=None):
+        merged_list = list1 + list2
+
+        # Create a dictionary for each item in the merged list
+        formatted_list = [
+            {
+                'image_id': image_id,
+                'category_id': item[0],
+                'bbox': item[1],
+                'score': item[2]
+            }
+            for item in merged_list
+        ]
+
+        # Read existing data
+        try:
+            with open('results.json', 'r') as f:
+                existing_data = json.load(f)
+        except FileNotFoundError:
+            existing_data = []
+
+        # Append new data to existing data
+        combined_data = existing_data + formatted_list
+
+        # Write combined data to file
+        with open('results.json', 'w') as f:
+            json.dump(combined_data, f)
 
 
 
