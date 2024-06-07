@@ -17,8 +17,8 @@ coco_classes = [
 ]
 class Helper_Functions:
 
-    def __init__(self, image_path):
-        self.image_path = image_path
+    def __init__(self):
+        pass
 
     def draw_boxes(self, image_path, bounding_boxes, debug_mode):
         # Load the original image
@@ -34,29 +34,6 @@ class Helper_Functions:
             # Display the image with bounding boxes
             cv2.imshow('Bounding Boxes', image)
             cv2.waitKey(0)
-
-    def create_binary_mask(self, bounding_boxes, debug_mode):
-        # Load the original image
-        image = cv2.imread(self.image_path)
-
-        # Create an empty binary image
-        binary_mask = np.zeros_like(image)
-
-        # Fill in the regions corresponding to the bounding boxes
-        for boxes in bounding_boxes:
-            for box in boxes:
-                x1, y1, x2, y2 = map(int, box)  # Convert coordinates to integers
-                binary_mask[y1:y2, x1:x2] = 255  # Fill in the region
-
-                # Draw bounding box in green on the binary mask
-                cv2.rectangle(binary_mask, (x1, y1), (x2, y2), (0, 255, 0), 2)
-
-        if debug_mode:
-            # Display the binary mask
-            cv2.imshow('Binary Mask', binary_mask)
-            cv2.waitKey(0)
-
-        return binary_mask
 
 
 
@@ -122,7 +99,7 @@ class Helper_Functions:
         if enable_evaluation_mode:
             # Read existing data
             try:
-                with open('results_evaluation.json.json', 'r') as f:
+                with open('results_evaluation.json', 'r') as f:
                     existing_data = json.load(f)
             except (FileNotFoundError, json.JSONDecodeError):
                 existing_data = []
@@ -148,6 +125,8 @@ class Helper_Functions:
             with open('results_gui.json', 'w') as f:
                 json.dump(combined_data, f)
 
+        return formatted_list  # Return the formatted list
+
 
     def find_crawler_coco_ids(self, labels_with_boxes):
         if not labels_with_boxes:
@@ -162,6 +141,7 @@ class Helper_Functions:
                 continue  # Skip if label is not found in coco_classes
             labels_with_ids.append((bbox, label_id, confidence))
         return labels_with_ids
+
 
 
 

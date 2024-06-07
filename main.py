@@ -1,76 +1,43 @@
 import YOLO
 import Helper_Functions
-import json
-import cv2
-import Segment_Anything
-import OpenAI_API
+import Validation
 import OpenAI_Key
-import matplotlib.pyplot as plt
+from pycocotools.coco import COCO
+
 
 # Control Panel
-# Choose camera idx: 0 for laptop webcam; idx:1 for external camera
 camera_idx = 0
 webcam = False
-conf_threshold = 0.05
-conf_threshold_crawler = 0.5
-image_path = 'Images/Table_with_objects.jpg' # Images/Sliding_Window_Results/subimage22.jpg
-sam_checkpoint = 'SegmentAnythingModel/sam_vit_h_4b8939.pth' # Segment anything checkpoint
+conf_threshold = 0.5
+conf_threshold_crawler = 0.1
+sam_checkpoint = 'SegmentAnythingModel/sam_vit_h_4b8939.pth'
 openAI_key = OpenAI_Key.openAI_key
 
-debug_mode = True # Must be False for evaluation mode
-enable_crawler = True # Must be True for crawler
-enable_evaluation_mode = False # Must be True for evaluation mode
+debug_mode = False
+enable_crawler = True
+enable_evaluation_mode = False
+
+# Initialize COCO ground truth
+coco_gt = COCO('Datasets/Coco/annotations/instances_val2017_subset.json')
+
+iou_scores = []
+
 
 if __name__ == "__main__":
-    # Call YOLO Detector
-    detector = YOLO.ObjectDetection(camera_idx, webcam, image_path, debug_mode, conf_threshold)
-    detector()
 
-    # Initialize Helper Functions
-    helper = Helper_Functions.Helper_Functions(image_path)
+    detector = YOLO.ObjectDetection(camera_idx, webcam, debug_mode, conf_threshold)
+    helper = Helper_Functions.Helper_Functions()
+    validation = Validation.Validation()
 
-    # Get YOLO Results
-    bounding_boxes, confidences, class_ids = detector.get_Yolo_Results()
-    yolo_labels_string, yolo_labels_class_id = helper.prepare_YOLO_Data(bounding_boxes, confidences, class_ids, conf_threshold_crawler, enable_evaluation_mode)
+    image_ids = coco_gt.getImgIds()
+    all_ious = []
 
-    #print("YOLO Labels with string: ", yolo_labels_string)
-    #print("YOLO Labels with class id: ", yolo_labels_class_id)
+    for image_id in image_ids:
 
-    if enable_crawler:
+        img_info = coco_gt.loadImgs(image_id)[0]
+        print("Processing image: ", img_info['file_name'])
+        coco_url = img_info['coco_url']
+        YoloData, confidences, image_url, frame = detector.get_YOLO_Results(coco_url, image_id)
+        validation.calculate_IoU(YoloData, coco_gt, coco_url, debug_mode)
 
-        # Load the image frame
-        frame = cv2.imread(detector.image_path)
-
-        # Initialize Webcrawler with your API key
-        openAI_key = openAI_key # OpenAI API key
-        webcrawler = OpenAI_API.Webcrawler(openAI_key)
-
-        # Filter and send to API for relabeling
-        labels_with_boxes = webcrawler.filter_and_send_to_api(frame, bounding_boxes, confidences, conf_threshold_crawler)
-        #print("Formatted labels with boxes: ", yolo_labels_string)
-        #print("New labels with boxes: ", labels_with_boxes)
-
-        # convert String IDs to Class IDs (int)
-        crawler_labels_class_id = helper.find_crawler_coco_ids(labels_with_boxes)
-        #print("Crawler labels with class id: ", crawler_labels_class_id)
-
-        if enable_evaluation_mode:
-            helper.merge_lists_and_write_to_json(crawler_labels_class_id, yolo_labels_class_id, enable_evaluation_mode, image_id=1)
-        else:
-            # Merge lists
-            helper.merge_lists_and_write_to_json(labels_with_boxes, yolo_labels_string, enable_evaluation_mode, image_id=1)
-            # Draw bounding boxes with new labels
-            helper.draw_bboxes_with_labels(frame, labels_with_boxes, yolo_labels_string)
-
-
-
-
-
-
-
-
-
-
-
-
-
+    validation.calculate_average_iou()

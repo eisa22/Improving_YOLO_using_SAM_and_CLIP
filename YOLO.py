@@ -3,14 +3,15 @@ import numpy as np
 import cv2
 from ultralytics import YOLO
 import json
+import requests
 
 class ObjectDetection:
-    def __init__(self, capture_index, webcam=True, image_path=None, debug_mode=False, conf_threshold=0.1):
+    def __init__(self, capture_index, webcam=True, debug_mode=False, conf_threshold=0.1):
         self.capture_index = capture_index
         self.webcam = webcam
-        self.image_path = image_path
         self.debug_mode = debug_mode
         self.conf_threshold = conf_threshold
+        self.results= []
 
         # ToDo: Make everything run on cuda
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -34,6 +35,7 @@ class ObjectDetection:
                     filtered_boxes.append(box)
             result.boxes = filtered_boxes
             filtered_results.append(result)
+            print("Filtered results: ", filtered_results)
         return filtered_results
 
     def plot_bboxes(self, results, frame):
@@ -51,76 +53,67 @@ class ObjectDetection:
 
         return results[0].plot(), xyxys, confidences, class_ids
 
-    def __call__(self):
+    def get_YOLO_Results(self, image_url, image_id):
         if self.webcam:
-            cap = cv2.VideoCapture(self.capture_index)
+            cap = cv2.VideoCapture(self.camera_idx)
             assert cap.isOpened(), "Cannot open camera"
 
             while True:
-                # Capture frame-by-frame
                 ret, frame = cap.read()
-                # if frame is read correctly ret is True
                 if not ret:
                     print("Can't receive frame (stream end?). Exiting ...")
                     break
 
-                # Perform object detection
                 results = self.predict(frame)
-
-                # Draw bounding boxes on the frame and get the plotted image, bounding boxes, confidences, and class ids
                 plotted_image, xyxys, confidences, class_ids = self.plot_bboxes(results, frame)
-
-                # Display the resulting frame
                 cv2.imshow('frame', plotted_image)
 
-                # Break the loop if 'q' key is pressed
                 if cv2.waitKey(1) == ord('q'):
                     break
 
-            # When everything done, release the capture
             cap.release()
             cv2.destroyAllWindows()
         else:
-            assert self.image_path is not None, "Image path must be provided when webcam is False"
-            frame = cv2.imread(self.image_path)
+            assert image_url is not None, "Image URL must be provided when webcam is False"
 
-            # Perform object detection
+            response = requests.get(image_url)
+            assert response.status_code == 200, "Failed to fetch image from URL"
+            image_array = np.asarray(bytearray(response.content), dtype=np.uint8)
+            frame = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+
             results = self.predict(frame)
-
-            # Draw bounding boxes on the frame and get the plotted image, bounding boxes, confidences, and class ids
             plotted_image, xyxys, confidences, class_ids = self.plot_bboxes(results, frame)
 
-            # Save confidences and class_ids to a JSON file
             data = {
+                "image_id": image_id,
+                "bbox": xyxys,
+                "category_id": class_ids,
                 "confidences": confidences,
-                "class_ids": class_ids,
-                "bounding_boxes": xyxys
+                "image_url": image_url
             }
 
-            with open('YOLO_results.json', 'w') as f:
-                json.dump(data, f)
+            # Convert data to COCO format
+            coco_data = []
+            for i in range(len(xyxys)):
+                coco_data.append({
+                    'image_id': image_id,
+                    'bbox': xyxys[i][0],  # Assuming xyxys is a nested list
+                    'category_id': int(class_ids[i][0]),  # Assuming class_ids is a nested list
+                    'id': i,  # Unique ID for each annotation
+                    'iscrowd': 0  # Assuming there are no crowd annotations in the YOLO results
+                })
+
+            self.results.append(coco_data)
+            self.save_results()
 
             if self.debug_mode:
-                # Display the resulting frame
-                cv2.imshow('thisframe', plotted_image)
-                cv2.waitKey(0)  # Wait for any key to be pressed to close the window
+                cv2.imshow('YOLO_Results', plotted_image)
+                cv2.waitKey(0)
                 cv2.destroyAllWindows()
+            return coco_data, confidences, image_url, frame
 
-    def get_Yolo_Results(self):
-        """
-        Returns the results of the object detection process.
 
-        Returns
-        -------
-        list, list, list
-            the bounding box coordinates, the confidences, and the class ids
-        """
-        # Read bounding box coordinates
-        with open('YOLO_results.json', 'r') as f:
-            data = json.load(f)
-
-        confidences = data['confidences']
-        class_ids = data['class_ids']
-        bounding_boxes = data['bounding_boxes']
-        return bounding_boxes, confidences, class_ids
+    def save_results(self):
+        with open('Results_YOLO_Detector.json', 'w') as f:
+            json.dump(self.results, f, indent=4)
 
