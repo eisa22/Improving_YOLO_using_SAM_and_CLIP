@@ -9,6 +9,23 @@ class Validation:
     import os
 
 
+    def coco_to_yolo(self, bbox):
+        x, y, width, height = bbox
+        center_x = x + width / 2
+        center_y = y + height / 2
+        return [center_x, center_y, width, height]
+
+    def yolo_to_coco(self, bbox):
+        center_x, center_y, width, height = bbox
+        x = center_x - width / 2
+        y = center_y - height / 2
+        return [x, y, width, height]
+
+    def is_yolo_format(self, bbox):
+        # Check if bbox is in YOLO format
+        x, y, width, height = bbox
+        return (x < width and y < height)  # Assuming coordinates are smaller than dimensions
+
     def calculate_IoU(self, cocoDataList, coco_gt, images_url, debug_mode):
         iou_scores = []
 
@@ -18,6 +35,10 @@ class Validation:
             category_id = data['category_id']
             print(f"Processing image_id: {image_id}, category_id: {category_id}")
 
+            # Check and convert bbox to COCO format if necessary
+            if self.is_yolo_format(bbox):
+                bbox = self.yolo_to_coco(bbox)
+
             # Load all ground truth data (not filtering by category)
             ann_ids = coco_gt.getAnnIds()
             anns = coco_gt.loadAnns(ann_ids)
@@ -26,9 +47,11 @@ class Validation:
             best_match = None
 
             for ann in anns:
+                ann_bbox = ann['bbox']
+
                 # Convert bounding boxes to [x1, y1, x2, y2] format
                 box1 = [bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]]
-                box2 = [ann['bbox'][0], ann['bbox'][1], ann['bbox'][0] + ann['bbox'][2], ann['bbox'][1] + ann['bbox'][3]]
+                box2 = [ann_bbox[0], ann_bbox[1], ann_bbox[0] + ann_bbox[2], ann_bbox[1] + ann_bbox[3]]
 
                 # Calculate IoU
                 iou_score = self.iou(box1, box2)
@@ -36,7 +59,7 @@ class Validation:
                     highest_iou = iou_score
                     best_match = ann
 
-            if best_match:
+            if best_match and highest_iou > 0.1:  # Check if the IoU score is higher than 0.6
                 iou_scores.append({
                     'image_id': image_id,
                     'category_id': category_id,
@@ -45,7 +68,7 @@ class Validation:
                 })
                 if debug_mode:
                     # Download the image
-                    image_url = f"{images_url}/{image_id}.jpg"  # Adjust the URL as needed
+                    image_url = f"{images_url}"  # Adjust the URL as needed
                     response = requests.get(image_url)
                     if response.status_code == 200:
                         image = Image.open(BytesIO(response.content))
@@ -57,6 +80,10 @@ class Validation:
                         # Draw the ground truth bounding box (in green)
                         gt_bbox = best_match['bbox']
                         draw.rectangle([gt_bbox[0], gt_bbox[1], gt_bbox[0] + gt_bbox[2], gt_bbox[1] + gt_bbox[3]], outline="green", width=2)
+
+                        # Draw the matched bounding box (in purple)
+                        matched_bbox = best_match['bbox']
+                        draw.rectangle([matched_bbox[0], matched_bbox[1], matched_bbox[0] + matched_bbox[2], matched_bbox[1] + matched_bbox[3]], outline="purple", width=2)
 
                         # Save the image with bounding boxes
                         debug_image_path = f"{image_id}_debug.jpg"
