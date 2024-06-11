@@ -27,24 +27,6 @@ coco_gt = COCO('Datasets/Coco/annotations/instances_val2017_subset.json')
 
 iou_scores = []
 
-def draw_bounding_boxes(bbox_list, image_url):
-    # Fetch the image from the URL
-    response = requests.get(image_url)
-    img = Image.open(BytesIO(response.content))
-
-    # Create a drawing context
-    draw = ImageDraw.Draw(img)
-
-    # Iterate through the list of bounding boxes and draw each one
-    for bbox_data in bbox_list:
-        bbox = bbox_data['bbox']
-        x, y, width, height = bbox
-        draw.rectangle([x, y, x + width, y + height], outline="red", width=2)
-
-    # Display the image with bounding boxes
-    img.show()
-
-
 
 if __name__ == "__main__":
     yolo = YOLO_V8.YOLO_V8('yolov8n.pt')  # Initialize the YOLO_V8 class with the model path
@@ -80,4 +62,21 @@ if __name__ == "__main__":
     # Save all results to JSON
     with open('results.json', 'w') as f:
         json.dump(all_results, f, indent=4)
+
+
+    # Calculate IoU ___________________________________________________
+    with open('results.json') as f:
+        results = json.load(f)
+
+    validation = Validation.Validation()
+    results_iou, overall_iou = validation.process_results(results)
+
+    # Save IoU results to results_IoU.txt in the current working directory
+    results_file_path = "results_IoU.txt"
+    with open(results_file_path, "w") as f:
+        for image_id, iou in results_iou.items():
+            f.write(f"Image ID: {image_id}, IoU: {iou}\n")
+        f.write(f"Overall IoU: {overall_iou}\n")
+
+    print("Overall IoU:", overall_iou)
 
