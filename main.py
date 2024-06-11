@@ -80,3 +80,15 @@ if __name__ == "__main__":
 
     print("Overall IoU:", overall_iou)
 
+    # Calculate Label Accuracy--------------------------------------------------------------------------
+    label_accuracy_results, overall_label_accuracy = validation.calculate_label_accuracy(results)
+
+    # Save Label Accuracy results to results_Labels.txt in the current working directory
+    label_accuracy_file_path = "results_Labels.txt"
+    with open(label_accuracy_file_path, "w") as f:
+        for image_id, accuracy in label_accuracy_results.items():
+            f.write(f"Image ID: {image_id}, Label Accuracy: {accuracy}\n")
+        f.write(f"Overall Label Accuracy: {overall_label_accuracy}\n")
+
+    print("Overall Label Accuracy:", overall_label_accuracy)
+
