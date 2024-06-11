@@ -57,9 +57,11 @@ class Validation:
 
         return results_iou, overall_iou
 
-    def calculate_label_accuracy(self, results):
-        results_label_accuracy = {}
-        overall_correct_labels = 0
+
+
+    def check_bbox_and_labels(self, results):
+        results_bbox_and_labels = {}
+        overall_correct_predictions = 0
         overall_count = 0
 
         for result in results:
@@ -67,28 +69,25 @@ class Validation:
             predictions = result['predictions']
             ground_truths = result['ground_truths']
 
-            correct_labels = 0
-            count = len(predictions)
-
+            correct_predictions = 0
             for pred in predictions:
                 for gt in ground_truths:
                     if pred['category'] == gt['category'] and self.calculate_iou(pred['bbox'], gt[
                         'bbox']) > 0.5:  # IoU threshold can be adjusted
-                        correct_labels += 1
+                        correct_predictions += 1
                         break
 
-            results_label_accuracy[image_id] = correct_labels / count if count > 0 else 0
+            results_bbox_and_labels[image_id] = correct_predictions / len(predictions) if len(predictions) > 0 else 0
+            overall_correct_predictions += correct_predictions
+            overall_count += len(predictions)
 
-            overall_correct_labels += correct_labels
-            overall_count += count
+        overall_accuracy = overall_correct_predictions / overall_count if overall_count > 0 else 0
 
-        overall_accuracy = overall_correct_labels / overall_count if overall_count > 0 else 0
+        with open('results_bbox_and_labels.txt', 'w') as file:
+            for image_id, accuracy in results_bbox_and_labels.items():
+                file.write(f'Image ID: {image_id}, Correct BBox and Labels: {accuracy}\n')
+            file.write(f'Overall Accuracy of BBox and Labels: {overall_accuracy}\n')
 
-        with open('results_Labels.txt', 'w') as file:
-            for image_id, accuracy in results_label_accuracy.items():
-                file.write(f'Image ID: {image_id}, Label Accuracy: {accuracy}\n')
-            file.write(f'Overall Label Accuracy: {overall_accuracy}\n')
-
-        return results_label_accuracy, overall_accuracy
+        return results_bbox_and_labels, overall_accuracy
 
 
