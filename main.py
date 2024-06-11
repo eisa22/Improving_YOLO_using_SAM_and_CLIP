@@ -3,7 +3,7 @@ import Helper_Functions
 import Validation
 import OpenAI_Key
 from pycocotools.coco import COCO
-
+import json
 import requests
 from PIL import Image, ImageDraw
 from io import BytesIO
@@ -45,11 +45,13 @@ def draw_bounding_boxes(bbox_list, image_url):
     img.show()
 
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     yolo = YOLO_V8.YOLO_V8('yolov8n.pt')  # Initialize the YOLO_V8 class with the model path
     image_ids = coco_gt.getImgIds()
     all_ious = []
+
+    all_results = []
 
     with open("Results_IoU.txt", "w") as f:
         for image_id in image_ids:
@@ -61,6 +63,8 @@ if __name__ == "__main__":
             # Get ground truth annotations
             ann_ids = coco_gt.getAnnIds(imgIds=image_id)
             anns = coco_gt.loadAnns(ann_ids)
+            gt_urls = []
+            gt_ids = []
             gt_boxes = []
             gt_class_ids = []
             for ann in anns:
@@ -68,6 +72,12 @@ if __name__ == "__main__":
                 # Convert bbox format from [x, y, width, height] to [xmin, ymin, xmax, ymax]
                 gt_boxes.append([bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]])
                 gt_class_ids.append(ann['category_id'])
-            yolo.plot_detections(image, pred_boxes, pred_class_ids, gt_boxes, gt_class_ids)
-            # Calculate IoU for matched bounding boxes by class names
-            matched_ious = []
+                gt_urls.append(image_url)
+                gt_ids.append(image_id)
+            result = yolo.plot_detections_and_save_results(image, pred_boxes, pred_class_ids, gt_boxes, gt_class_ids, image_id, image_url)
+            all_results.append(result)
+
+    # Save all results to JSON
+    with open('results.json', 'w') as f:
+        json.dump(all_results, f, indent=4)
+

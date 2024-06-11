@@ -6,7 +6,7 @@ from ultralytics import YOLO
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from pycocotools.coco import COCO
-
+import json
 
 # Setting the environment variable to handle the OpenMP error
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
@@ -67,12 +67,22 @@ class YOLO_V8:
                 class_ids.append(int(box.cls.tolist()[0]))
         return image, boxes, class_ids
 
-    def plot_detections(self, image, pred_boxes, pred_class_ids, gt_boxes=None, gt_class_ids=None):
+    def plot_detections_and_save_results(self, image, pred_boxes, pred_class_ids, gt_boxes=None, gt_class_ids=None,
+                                         image_id=None, image_url=None):
+
         # Convert image from BGR (OpenCV format) to RGB (matplotlib format)
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         # Plot the image
         fig, ax = plt.subplots(1, figsize=(12, 9))
         ax.imshow(image_rgb)
+
+        results = {
+            "image_id": image_id,
+            "url": image_url,
+            "predictions": [],
+            "ground_truths": []
+        }
+
         # Plot each predicted bounding box
         for i, box in enumerate(pred_boxes):
             xmin, ymin, xmax, ymax = box[0]
@@ -81,7 +91,15 @@ class YOLO_V8:
             rect = patches.Rectangle((xmin, ymin), width, height, linewidth=2, edgecolor='r', facecolor='none')
             ax.add_patch(rect)
             # Add predicted class ID text
-            ax.text(xmin, ymin - 10, YOLO_CATEGORY_ID_LIST.get(pred_class_ids[i], "Unknown"), color='red', fontsize=12, weight='bold')
+            class_name = YOLO_CATEGORY_ID_LIST.get(pred_class_ids[i], "Unknown")
+            ax.text(xmin, ymin - 10, class_name, color='red', fontsize=12, weight='bold')
+
+            # Append to results
+            results["predictions"].append({
+                "bbox": [xmin, ymin, xmax, ymax],
+                "category": class_name
+            })
+
         # Plot each ground truth bounding box if provided
         if gt_boxes is not None and gt_class_ids is not None:
             for i, box in enumerate(gt_boxes):
@@ -91,9 +109,20 @@ class YOLO_V8:
                 rect = patches.Rectangle((xmin, ymin), width, height, linewidth=2, edgecolor='g', facecolor='none')
                 ax.add_patch(rect)
                 # Add ground truth class ID text
-                ax.text(xmin, ymin - 10, COCO_CATEGORY_ID_LIST.get(gt_class_ids[i], "Unknown"), color='green', fontsize=12, weight='bold')  # Adjust for 1-based indexing
+                class_name = COCO_CATEGORY_ID_LIST.get(gt_class_ids[i], "Unknown")
+                ax.text(xmin, ymin - 10, class_name, color='green', fontsize=12, weight='bold')
+
+                # Append to results
+                results["ground_truths"].append({
+                    "bbox": [xmin, ymin, xmax, ymax],
+                    "category": class_name
+                })
+
         plt.axis('off')  # Hide axes
         plt.show()
+
+        # Return results instead of saving directly to JSON
+        return results
 
 
 # Example usage
