@@ -179,6 +179,15 @@ class Helper_Functions:
 
 
 
+    @staticmethod
+    def count_prediction_bboxes(data):
+        count = 0
+        for item in data:
+            count += len(item.get("ground_truths", []))
+        return count
+
+
+
 
 
 

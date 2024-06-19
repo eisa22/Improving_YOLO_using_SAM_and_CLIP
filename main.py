@@ -22,6 +22,7 @@ openAI_key = OpenAI_Key.openAI_key
 debug_mode = True
 enable_crawler = False
 enable_evaluation_mode = False
+activate_Segment_Anything = False
 
 # Initialize COCO ground truth
 coco_gt = COCO('Datasets/Coco/annotations/instances_val2017_subset.json')
@@ -85,16 +86,34 @@ if __name__ == "__main__":
     print("Overall IoU:", overall_iou)
 
     # Calculate YOLO Accuracy ___________________________________________________
-    validation.calculate_YOLO_accuracy()
+    validation.calculate_YOLO_accuracy() # [Accuracy_YOLO.txt]
 
-    #Calculate YOLO + API Accuracy (seperately of the YOLO accuracy) ___________________________________________________
-    validation.calculate_YOLO_API_accuracy()
+    #Calculate  API Accuracy (seperately of the YOLO accuracy) ___________________________________________________
+    validation.calculate_YOLO_API_accuracy() # [Accuracy_YOLO_API.txt]
 
     # Calculate FINAL Accoracy of Yolo + API ___________________________________________________
-    validation.calculate_FINAL_accuracy()
+    validation.calculate_FINAL_accuracy() # [Accuracy_FINAL.txt]
 
     # Segment images using SegmentAnything ___________________________________________________
-    #segment_anything.segment_images()
+    if activate_Segment_Anything:
+
+        file_path = 'results.json'
+        data = segment_anything.load_json(file_path)
+        results, total_bounding_boxes = segment_anything.process_images(data)
+        segment_anything.write_results_to_file(results)
+        print(f"Results have been written to Results_SegmentAnything.txt")
+        print(f"Total number of bounding boxes detected: {total_bounding_boxes}")
+
+    # Load the data from the JSON file
+    with open("results.json") as f:
+        data = json.load(f)
+
+
+
+
+    # Count the bounding boxes
+    bbox_count = helper.count_prediction_bboxes(data)
+    print(f"Total number of bounding boxes detected: {bbox_count}")
 
 
 
@@ -103,7 +122,7 @@ if __name__ == "__main__":
 
 
     # Helper to merge json files
-    helper.merge_jsons()
+    #helper.merge_jsons()
 
 
 
