@@ -4,6 +4,7 @@ import Validation
 import OpenAI_Key
 from pycocotools.coco import COCO
 import json
+import Segment_Anything
 import requests
 from PIL import Image, ImageDraw
 from io import BytesIO
@@ -19,7 +20,7 @@ sam_checkpoint = 'SegmentAnythingModel/sam_vit_h_4b8939.pth'
 openAI_key = OpenAI_Key.openAI_key
 
 debug_mode = True
-enable_crawler = True
+enable_crawler = False
 enable_evaluation_mode = False
 
 # Initialize COCO ground truth
@@ -30,38 +31,41 @@ iou_scores = []
 
 if __name__ == "__main__":
     yolo = YOLO_V8.YOLO_V8('yolov8n.pt')  # Initialize the YOLO_V8 class with the model path
+    helper = Helper_Functions.Helper_Functions()  # Initialize the Helper_Functions class
+    segment_anything = Segment_Anything.SegmentAnything(sam_checkpoint)  # Initialize the Segment_Anything class
     image_ids = coco_gt.getImgIds()
     all_ious = []
 
     all_results = []
 
-    with open("Results_IoU.txt", "w") as f:
-        for image_id in image_ids:
-            img_info = coco_gt.loadImgs(image_id)[0]
-            print("Processing image: ", img_info['file_name'])
-            f.write(f"Processing image: {img_info['file_name']}\n")
-            image_url = img_info['coco_url']
-            image, pred_boxes, pred_class_ids = yolo.get_detections(image_url)
-            # Get ground truth annotations
-            ann_ids = coco_gt.getAnnIds(imgIds=image_id)
-            anns = coco_gt.loadAnns(ann_ids)
-            gt_urls = []
-            gt_ids = []
-            gt_boxes = []
-            gt_class_ids = []
-            for ann in anns:
-                bbox = ann['bbox']
-                # Convert bbox format from [x, y, width, height] to [xmin, ymin, xmax, ymax]
-                gt_boxes.append([bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]])
-                gt_class_ids.append(ann['category_id'])
-                gt_urls.append(image_url)
-                gt_ids.append(image_id)
-            result = yolo.plot_detections_and_save_results(image, pred_boxes, pred_class_ids, gt_boxes, gt_class_ids, image_id, image_url)
-            all_results.append(result)
+    if enable_crawler:
+        with open("Results_IoU.txt", "w") as f:
+            for image_id in image_ids:
+                img_info = coco_gt.loadImgs(image_id)[0]
+                print("Processing image: ", img_info['file_name'])
+                f.write(f"Processing image: {img_info['file_name']}\n")
+                image_url = img_info['coco_url']
+                image, pred_boxes, pred_class_ids = yolo.get_detections(image_url)
+                # Get ground truth annotations
+                ann_ids = coco_gt.getAnnIds(imgIds=image_id)
+                anns = coco_gt.loadAnns(ann_ids)
+                gt_urls = []
+                gt_ids = []
+                gt_boxes = []
+                gt_class_ids = []
+                for ann in anns:
+                    bbox = ann['bbox']
+                    # Convert bbox format from [x, y, width, height] to [xmin, ymin, xmax, ymax]
+                    gt_boxes.append([bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]])
+                    gt_class_ids.append(ann['category_id'])
+                    gt_urls.append(image_url)
+                    gt_ids.append(image_id)
+                result = yolo.plot_detections_and_save_results(image, pred_boxes, pred_class_ids, gt_boxes, gt_class_ids, image_id, image_url)
+                all_results.append(result)
 
-    # Save all results to JSON
-    with open('results.json', 'w') as f:
-        json.dump(all_results, f, indent=4)
+        # Save all results to JSON
+        with open('results.json', 'w') as f:
+            json.dump(all_results, f, indent=4)
 
 
     # Calculate IoU ___________________________________________________
@@ -80,16 +84,29 @@ if __name__ == "__main__":
 
     print("Overall IoU:", overall_iou)
 
+    # Calculate YOLO Accuracy ___________________________________________________
+    validation.calculate_YOLO_accuracy()
 
-    # Correct BBox and Labels--------------------------------------------------------------------------------
-    bbox_and_labels_results, overall_bbox_and_labels_accuracy = validation.check_bbox_and_labels(results)
+    #Calculate YOLO + API Accuracy (seperately of the YOLO accuracy) ___________________________________________________
+    validation.calculate_YOLO_API_accuracy()
 
-    # Save BBox and Labels results to results_bbox_and_labels.txt in the current working directory
-    bbox_and_labels_file_path = "results_bbox_and_labels.txt"
-    with open(bbox_and_labels_file_path, "w") as f:
-        for image_id, accuracy in bbox_and_labels_results.items():
-            f.write(f"Image ID: {image_id}, Correct BBox and Labels: {accuracy}\n")
-        f.write(f"Overall Accuracy of BBox and Labels: {overall_bbox_and_labels_accuracy}\n")
+    # Calculate FINAL Accoracy of Yolo + API ___________________________________________________
+    validation.calculate_FINAL_accuracy()
 
-    print("Overall Accuracy of BBox and Labels:", overall_bbox_and_labels_accuracy)
+    # Segment images using SegmentAnything ___________________________________________________
+    #segment_anything.segment_images()
+
+
+
+
+
+
+
+    # Helper to merge json files
+    helper.merge_jsons()
+
+
+
+
+
 

@@ -57,37 +57,118 @@ class Validation:
 
         return results_iou, overall_iou
 
+    @staticmethod
+    def calculate_YOLO_accuracy():
+        # Load the data from results.json
+        with open('results.json') as f:
+            data = json.load(f)
+
+        total_matches = 0
+        total_predictions = 0
+
+        # Open Accuracy_YOLO.txt for writing
+        with open('Accuracy_YOLO.txt', 'w') as f:
+            # Process each image in the data
+            for image in data:
+                # Extract the categories from the predictions and ground truths
+                pred_categories = {pred['category'] for pred in image['predictions']}
+                gt_categories = {gt['category'] for gt in image['ground_truths']}
 
 
-    def check_bbox_and_labels(self, results):
-        results_bbox_and_labels = {}
-        overall_correct_predictions = 0
-        overall_count = 0
+                # Compare the categories and count the matches
+                matches = len(pred_categories & gt_categories)
+                total_matches += matches
+                #print("Total matches", matches)
+                total_predictions += len(pred_categories)
 
-        for result in results:
-            image_id = result['image_id']
-            predictions = result['predictions']
-            ground_truths = result['ground_truths']
+                # Calculate the accuracy for the image
+                accuracy = matches / len(pred_categories) if pred_categories else 0
 
-            correct_predictions = 0
-            for pred in predictions:
-                for gt in ground_truths:
-                    if pred['category'] == gt['category'] and self.calculate_iou(pred['bbox'], gt[
-                        'bbox']) > 0.5:  # IoU threshold can be adjusted
-                        correct_predictions += 1
-                        break
+                # Write the result for the image to Accuracy_YOLO.txt
+                f.write(f"Image ID: {image['image_id']}, Accuracy: {accuracy}\n")
 
-            results_bbox_and_labels[image_id] = correct_predictions / len(predictions) if len(predictions) > 0 else 0
-            overall_correct_predictions += correct_predictions
-            overall_count += len(predictions)
+            # Calculate the overall accuracy
+            overall_accuracy = total_matches / total_predictions if total_predictions else 0
 
-        overall_accuracy = overall_correct_predictions / overall_count if overall_count > 0 else 0
+            # Write the overall accuracy to Accuracy_YOLO.txt
+            f.write(f"Overall Accuracy: {overall_accuracy}\n")
 
-        with open('results_bbox_and_labels.txt', 'w') as file:
-            for image_id, accuracy in results_bbox_and_labels.items():
-                file.write(f'Image ID: {image_id}, Correct BBox and Labels: {accuracy}\n')
-            file.write(f'Overall Accuracy of BBox and Labels: {overall_accuracy}\n')
 
-        return results_bbox_and_labels, overall_accuracy
+
+
+    @staticmethod
+    def calculate_YOLO_API_accuracy():
+        # Load the data from results.json
+        with open('results_ChatGPT.json') as f:
+            data = json.load(f)
+
+        total_matches = 0
+        total_predictions = 0
+
+        # Open Accuracy_YOLO.txt for writing
+        with open('Accuracy_YOLO_API.txt', 'w') as f:
+            # Process each image in the data
+            for image in data:
+                # Extract the categories from the predictions and ground truths
+                pred_categories = {pred['category'] for pred in image['GPT_predictions']}
+                gt_categories = {gt['category'] for gt in image['ground_truths']}
+                print("Predicted categories", pred_categories)
+                print("Ground truth categories", gt_categories)
+
+
+                # Compare the categories and count the matches
+                matches = len(pred_categories & gt_categories)
+                total_matches += matches
+                print("Total matches", matches)
+                total_predictions += len(pred_categories)
+
+                # Calculate the accuracy for the image
+                accuracy = matches / len(pred_categories) if pred_categories else 0
+
+                # Write the result for the image to Accuracy_YOLO.txt
+                f.write(f"Image ID: {image['image_id']}, Accuracy: {accuracy}\n")
+
+            # Calculate the overall accuracy
+            overall_accuracy = total_matches / total_predictions if total_predictions else 0
+
+            # Write the overall accuracy to Accuracy_YOLO.txt
+
+            f.write(f"Overall Accuracy: {overall_accuracy}\n")
+
+    @staticmethod
+    def calculate_FINAL_accuracy():
+        # Load the data from results.json
+        with open('final_result.json') as f:
+            data = json.load(f)
+
+        total_matches = 0
+        total_predictions = 0
+
+        # Open Accuracy_YOLO.txt for writing
+        with open('Accuracy_Final.txt', 'w') as f:
+            # Process each image in the data
+            for image in data:
+                # Extract the categories from the predictions and ground truths
+                pred_categories = {pred['category'] for pred in image['predictions']}
+                gt_categories = {gt['category'] for gt in image['ground_truths']}
+
+                # Compare the categories and count the matches
+                matches = len(pred_categories & gt_categories)
+                total_matches += matches
+                # print("Total matches", matches)
+                total_predictions += len(pred_categories)
+
+                # Calculate the accuracy for the image
+                accuracy = matches / len(pred_categories) if pred_categories else 0
+
+                # Write the result for the image to Accuracy_YOLO.txt
+                f.write(f"Image ID: {image['image_id']}, Accuracy: {accuracy}\n")
+
+            # Calculate the overall accuracy
+            overall_accuracy = total_matches / total_predictions if total_predictions else 0
+
+            # Write the overall accuracy to Accuracy_YOLO.txt
+            f.write(f"Overall Accuracy: {overall_accuracy}\n")
+
 
 

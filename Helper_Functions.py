@@ -143,6 +143,44 @@ class Helper_Functions:
         return labels_with_ids
 
 
+    @staticmethod
+    def merge_jsons():
+        # Load the data from results.json
+        with open('results.json') as f:
+            results_data = json.load(f)
+
+        # Load the data from results_Chat_GPT.json
+        with open('results_ChatGPT.json') as f:
+            chat_gpt_data = json.load(f)
+
+        # Create a dictionary for faster lookup of GPT predictions
+        gpt_predictions_dict = {image['image_id']: image['GPT_predictions'] for image in chat_gpt_data}
+
+        # Process each image in the results data
+        for image in results_data:
+            image_id = image['image_id']
+
+            # If this image is in the GPT predictions, overwrite the categories
+            if image_id in gpt_predictions_dict:
+                gpt_predictions = gpt_predictions_dict[image_id]
+
+                # Create a dictionary for faster lookup of GPT categories
+                gpt_categories_dict = {tuple(pred['bbox']): pred['category'] for pred in gpt_predictions}
+
+                # Overwrite the categories in the results data
+                for pred in image['predictions']:
+                    bbox_tuple = tuple(pred['bbox'])
+                    if bbox_tuple in gpt_categories_dict:
+                        pred['category'] = gpt_categories_dict[bbox_tuple]
+
+        # Write the merged data to final_result.json
+        with open('final_result.json', 'w') as f:
+            json.dump(results_data, f, indent=4)
+
+
+
+
+
 
 
 
