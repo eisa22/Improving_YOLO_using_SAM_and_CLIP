@@ -1,0 +1,18 @@
+Image ID: 397133, Correct BBox and Labels: 0.0
+Image ID: 37777, Correct BBox and Labels: 0.0
+Image ID: 386912, Correct BBox and Labels: 0.0
+Image ID: 173383, Correct BBox and Labels: 0.0
+Image ID: 39956, Correct BBox and Labels: 0.0
+Image ID: 340175, Correct BBox and Labels: 0.0
+Image ID: 578500, Correct BBox and Labels: 0.0
+Image ID: 366141, Correct BBox and Labels: 0.0
+Image ID: 524456, Correct BBox and Labels: 0.0
+Image ID: 171190, Correct BBox and Labels: 0.0
+Image ID: 294831, Correct BBox and Labels: 0.0
+Image ID: 84431, Correct BBox and Labels: 0.0
+Image ID: 323355, Correct BBox and Labels: 0.0
+Image ID: 355325, Correct BBox and Labels: 0.0
+Image ID: 9483, Correct BBox and Labels: 0.0
+Image ID: 326082, Correct BBox and Labels: 0.0
+Image ID: 108026, Correct BBox and Labels: 0.0
+Overall Accuracy of BBox and Labels: 0.0
