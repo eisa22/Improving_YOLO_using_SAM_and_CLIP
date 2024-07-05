@@ -1,0 +1,18 @@
+Image ID: 397133, Accuracy: 0.36363636363636365
+Image ID: 37777, Accuracy: 0.375
+Image ID: 386912, Accuracy: 0.4
+Image ID: 173383, Accuracy: 0.0
+Image ID: 39956, Accuracy: 1.0
+Image ID: 340175, Accuracy: 0.25
+Image ID: 578500, Accuracy: 0.6
+Image ID: 366141, Accuracy: 0.75
+Image ID: 524456, Accuracy: 0.4
+Image ID: 171190, Accuracy: 0.5714285714285714
+Image ID: 294831, Accuracy: 0.6
+Image ID: 84431, Accuracy: 0.5
+Image ID: 323355, Accuracy: 0.5
+Image ID: 355325, Accuracy: 0.7142857142857143
+Image ID: 9483, Accuracy: 0.75
+Image ID: 326082, Accuracy: 0.3333333333333333
+Image ID: 108026, Accuracy: 0.3333333333333333
+Overall mAP: 0.46153846153846156

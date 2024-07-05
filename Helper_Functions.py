@@ -17,8 +17,8 @@ coco_classes = [
 ]
 class Helper_Functions:
 
-    def __init__(self, image_path):
-        self.image_path = image_path
+    def __init__(self):
+        pass
 
     def draw_boxes(self, image_path, bounding_boxes, debug_mode):
         # Load the original image
@@ -34,29 +34,6 @@ class Helper_Functions:
             # Display the image with bounding boxes
             cv2.imshow('Bounding Boxes', image)
             cv2.waitKey(0)
-
-    def create_binary_mask(self, bounding_boxes, debug_mode):
-        # Load the original image
-        image = cv2.imread(self.image_path)
-
-        # Create an empty binary image
-        binary_mask = np.zeros_like(image)
-
-        # Fill in the regions corresponding to the bounding boxes
-        for boxes in bounding_boxes:
-            for box in boxes:
-                x1, y1, x2, y2 = map(int, box)  # Convert coordinates to integers
-                binary_mask[y1:y2, x1:x2] = 255  # Fill in the region
-
-                # Draw bounding box in green on the binary mask
-                cv2.rectangle(binary_mask, (x1, y1), (x2, y2), (0, 255, 0), 2)
-
-        if debug_mode:
-            # Display the binary mask
-            cv2.imshow('Binary Mask', binary_mask)
-            cv2.waitKey(0)
-
-        return binary_mask
 
 
 
@@ -122,7 +99,7 @@ class Helper_Functions:
         if enable_evaluation_mode:
             # Read existing data
             try:
-                with open('results_evaluation.json.json', 'r') as f:
+                with open('results_evaluation.json', 'r') as f:
                     existing_data = json.load(f)
             except (FileNotFoundError, json.JSONDecodeError):
                 existing_data = []
@@ -148,6 +125,8 @@ class Helper_Functions:
             with open('results_gui.json', 'w') as f:
                 json.dump(combined_data, f)
 
+        return formatted_list  # Return the formatted list
+
 
     def find_crawler_coco_ids(self, labels_with_boxes):
         if not labels_with_boxes:
@@ -162,6 +141,54 @@ class Helper_Functions:
                 continue  # Skip if label is not found in coco_classes
             labels_with_ids.append((bbox, label_id, confidence))
         return labels_with_ids
+
+
+    @staticmethod
+    def merge_jsons():
+        # Load the data from results.json
+        with open('results.json') as f:
+            results_data = json.load(f)
+
+        # Load the data from results_Chat_GPT.json
+        with open('results_ChatGPT.json') as f:
+            chat_gpt_data = json.load(f)
+
+        # Create a dictionary for faster lookup of GPT predictions
+        gpt_predictions_dict = {image['image_id']: image['GPT_predictions'] for image in chat_gpt_data}
+
+        # Process each image in the results data
+        for image in results_data:
+            image_id = image['image_id']
+
+            # If this image is in the GPT predictions, overwrite the categories
+            if image_id in gpt_predictions_dict:
+                gpt_predictions = gpt_predictions_dict[image_id]
+
+                # Create a dictionary for faster lookup of GPT categories
+                gpt_categories_dict = {tuple(pred['bbox']): pred['category'] for pred in gpt_predictions}
+
+                # Overwrite the categories in the results data
+                for pred in image['predictions']:
+                    bbox_tuple = tuple(pred['bbox'])
+                    if bbox_tuple in gpt_categories_dict:
+                        pred['category'] = gpt_categories_dict[bbox_tuple]
+
+        # Write the merged data to final_result.json
+        with open('final_result.json', 'w') as f:
+            json.dump(results_data, f, indent=4)
+
+
+
+    @staticmethod
+    def count_prediction_bboxes(data):
+        count = 0
+        for item in data:
+            count += len(item.get("ground_truths", []))
+        return count
+
+
+
+
 
 
 
