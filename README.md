@@ -24,7 +24,7 @@ To set up the environment for this project, follow these steps:
 
 1. **Clone the repository**:
     ```bash
-    git clone https://github.com/yourusername/yolo-object-detector.git
+    git clone https://github.com/eisa22/Improving_YOLO_using_SAM_and_CLIP.git
     cd yolo-object-detector
     ```
 
