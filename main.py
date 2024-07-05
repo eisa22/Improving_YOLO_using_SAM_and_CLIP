@@ -21,6 +21,7 @@ openAI_key = OpenAI_Key.openAI_key
 
 debug_mode = True
 enable_crawler = False
+enable_contextual_crawler = False
 enable_evaluation_mode = False
 activate_Segment_Anything = True
 
@@ -109,20 +110,11 @@ if __name__ == "__main__":
         data = json.load(f)
 
 
-
-
     # Count the bounding boxes
     bbox_count = helper.count_prediction_bboxes(data)
     print(f"Total number of bounding boxes detected: {bbox_count}")
 
 
-
-
-
-
-
-    # Helper to merge json files
-    #helper.merge_jsons()
 
 
 

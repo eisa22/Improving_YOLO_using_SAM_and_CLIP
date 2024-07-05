@@ -4,3 +4,7 @@ Images/Sliding_Window_Results/
 Private_Keys/
 openAI_Key.py
 SegmentAnythingModel/
+Accuracy_Final.txt
+Accuracy_YOLO.txt
+Accuracy_YOLO_API.txt
+final_result.json
