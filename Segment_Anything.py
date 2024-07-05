@@ -7,6 +7,9 @@ import requests
 from PIL import Image
 from io import BytesIO
 
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+
 class SegmentAnything:
     def __init__(self, sam_checkpoint, model_type='vit_h'):
         # Initialize the SAM model
@@ -69,6 +72,8 @@ class SegmentAnything:
                 'url': url,
                 'bounding_boxes': bounding_boxes
             })
+            # Plot the results for the image
+            self.plot_results(img, bounding_boxes)
         return results, total_bounding_boxes
 
     def write_results_to_file(self, results, file_path='Results_SegmentAnything.txt'):
@@ -80,3 +85,21 @@ class SegmentAnything:
                 for bbox in result['bounding_boxes']:
                     file.write(f"  {bbox}\n")
                 file.write("\n")
+
+
+
+    def plot_results(self, image, bounding_boxes):
+        # Create figure and axes
+        fig, ax = plt.subplots(1)
+
+        # Display the image
+        ax.imshow(image)
+
+        # Create a Rectangle patch for each bounding box and add it to the plot
+        for bbox in bounding_boxes:
+            x1, y1, x2, y2 = bbox
+            rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=1, edgecolor='r', facecolor='none')
+            ax.add_patch(rect)
+
+        # Show the plot
+        plt.show()

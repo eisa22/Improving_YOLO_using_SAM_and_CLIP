@@ -22,7 +22,7 @@ openAI_key = OpenAI_Key.openAI_key
 debug_mode = True
 enable_crawler = False
 enable_evaluation_mode = False
-activate_Segment_Anything = False
+activate_Segment_Anything = True
 
 # Initialize COCO ground truth
 coco_gt = COCO('Datasets/Coco/annotations/instances_val2017_subset.json')
