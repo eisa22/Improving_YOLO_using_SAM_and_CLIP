@@ -1,6 +1,6 @@
 # YOLO Object Detector with Segment Anything and CLIP Integration
 
-This project implements an improved YOLO object detector by integrating the Segment Anything model and CLIP (OpenAI API) to enhance performance. 
+TriFusionNet is a 3 stage pipeline consisting of YOLOv8, Segments Anything and CLIP. This project implements an improved YOLO object detector by integrating the Segment Anything model and CLIP (OpenAI API) to enhance the original performance. 
 ![grafik](https://github.com/eisa22/Improving_YOLO_using_SAM_and_CLIP/assets/146633211/f6909885-e58c-4e02-8f17-2bc531fc8290)
 
 
